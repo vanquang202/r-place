@@ -9,7 +9,6 @@
         margin: 0;
         background-color: black;
       }
-
       .r {
         position: absolute;
         flex-direction: row;
@@ -19,7 +18,7 @@
         transform: translate(-50%, -50%);
         background-color: white;
         overflow: auto;
-        padding: 200px;
+        padding-bottom: 100px;
       }
       .change-color {
         position: fixed;
@@ -48,12 +47,20 @@
       .pixcel:hover {
         border: 0.1px solid black;
       }
+      .al {
+        position: fixed;
+        top: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 999;
+      }
     </style>
     <script src="https://vps.jimdev.top:6001/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.6.1/dist/echo.iife.js"></script>
   </head>
 
   <body>
+    <div class="al"></div>
     <div class="r"></div>
     <div class="change-color">
       <div data-color="brown" class="b" style="background-color: brown"></div>
@@ -117,6 +124,10 @@
         });
 
       let color = "black";
+      var blockCall = false;
+      let time = 4;
+      let mtime = time * 1000;
+      let offset = 5;
       document.addEventListener(
         "click",
         function (evt) {
@@ -129,11 +140,38 @@
             evt.target.style.border = "2px solid black";
             color = evt.target.dataset.color;
           }
+          if (blockCall) return;
           if (!evt.target.dataset.id) return;
+          blockCall = true;
           fetch(
             `https://vps.jimdev.top/api/public/send-rplace?id=${evt.target.dataset.id}&pid=${evt.target.dataset.pid}&color=${color}`
-          );
-          evt.target.style.backgroundColor = color;
+          )
+            .then((res) => {
+              offset = offset - 1;
+              if (offset == 0) {
+                offset = 5;
+                let i = setInterval(() => {
+                  time = time - 1;
+                  let html = `
+                  <div style="color: orange; width: 100%">
+                    <p style="font-size: 30px ; padding : 5px"> ${time}</p>
+                  </div>
+                `;
+                  document.querySelector(".al").innerHTML = html;
+                }, mtime / time);
+                setTimeout(() => {
+                  blockCall = false;
+                  clearInterval(i);
+                  time = 4;
+                  document.querySelector(".al").innerHTML = "";
+                }, mtime);
+              } else {
+                blockCall = false;
+              }
+
+              evt.target.style.backgroundColor = color;
+            })
+            .catch((err) => location.reload());
         },
         false
       );
