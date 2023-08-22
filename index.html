@@ -248,7 +248,6 @@
       let echo = window.Echo.channel("public.channel").listen(
         "PublicChannel",
         function (res) {
-          console.log(res);
           res = res.message;
           let dataE = document.querySelector(
             `[data-id="${res.id}"][data-pid="${res.pid}"]`
