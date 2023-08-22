@@ -156,83 +156,87 @@
     <h2>Github <a href="https://github.com/vanquang202">Jimdev</a></h2>
     <p>Replace <a href="https://jimdev.top/">Jimdev</a></p>
     <script>
-      function render() {
-        let htmlOld = "";
-        for (let index = 0; index < arr.length; index++) {
-          let item = arr[index];
-          let html = '<div class="r-2">';
-          for (let i = 0; i < item.length; i++) {
-            let itemChild = item[i];
-            html += `<div style="background : ${itemChild}" data-id="${i}" data-pid="${index}" class="pixcel"></div>`;
-          }
-          html += `</div>`;
-          htmlOld += html;
-        }
-        document.querySelector(".r").innerHTML = htmlOld;
-      }
-      let arr = [];
-      fetch("https://vps.jimdev.top/api/public/rplace")
-        .then((res) => res.json())
-        .then((res) => {
-          arr = res;
-          render();
-        });
-
-      let color = "black";
-      var blockCall = false;
-      let time = 4;
-      let mtime = time * 1000;
-      let offset = 5;
-      let audio = document.getElementById("audio");
-      document.addEventListener(
-        "click",
-        function (evt) {
-          audio.play();
-          if (evt.target.dataset.color) {
-            let ps = document.querySelectorAll(".b");
-            for (let index = 0; index < ps.length; index++) {
-              const element = ps[index];
-              element.style.border = "2px solid transparent";
+      const start = () => {
+        function render() {
+          let htmlOld = "";
+          for (let index = 0; index < arr.length; index++) {
+            let item = arr[index];
+            let html = '<div class="r-2">';
+            for (let i = 0; i < item.length; i++) {
+              let itemChild = item[i];
+              html += `<div style="background : ${itemChild}" data-id="${i}" data-pid="${index}" class="pixcel"></div>`;
             }
-            evt.target.style.border = "2px solid black";
-            color = evt.target.dataset.color;
+            html += `</div>`;
+            htmlOld += html;
           }
-          if (blockCall) return;
-          if (!evt.target.dataset.id) return;
-          blockCall = true;
-          fetch(
-            `https://vps.jimdev.top/api/public/send-rplace?id=${evt.target.dataset.id}&pid=${evt.target.dataset.pid}&color=${color}`
-          )
-            .then((res) => {
-              offset = offset - 1;
-              if (offset == 0) {
-                offset = 5;
-                let i = setInterval(() => {
-                  time = time - 1;
-                  let html = `
+          document.querySelector(".r").innerHTML = htmlOld;
+        }
+        let arr = [];
+        fetch("https://vps.jimdev.top/api/public/rplace")
+          .then((res) => res.json())
+          .then((res) => {
+            arr = res;
+            render();
+          });
+
+        let color = "black";
+        let blockCall = false;
+        let time = 4;
+        const mtime = time * 1000;
+        let offset = 10;
+        const audio = document.getElementById("audio");
+        document.addEventListener(
+          "click",
+          function (evt) {
+            audio.play();
+            if (evt.target.dataset.color) {
+              let ps = document.querySelectorAll(".b");
+              for (let index = 0; index < ps.length; index++) {
+                const element = ps[index];
+                element.style.border = "2px solid transparent";
+              }
+              evt.target.style.border = "2px solid black";
+              color = evt.target.dataset.color;
+            }
+            if (blockCall) return;
+            if (!evt.target.dataset.id) return;
+            blockCall = true;
+            fetch(
+              `https://vps.jimdev.top/api/public/send-rplace?id=${evt.target.dataset.id}&pid=${evt.target.dataset.pid}&color=${color}`
+            )
+              .then((res) => {
+                offset = offset - 1;
+                if (offset == 0) {
+                  offset = 5;
+                  let i = setInterval(() => {
+                    time = time - 1;
+                    let html = `
                   <div style="color: orange; width: 100%">
                     <p style="font-size: 30px ; padding : 5px"> ${time}</p>
                   </div>
                 `;
-                  document.querySelector(".al").innerHTML = html;
-                }, mtime / time);
-                setTimeout(() => {
-                  audio.play();
+                    document.querySelector(".al").innerHTML = html;
+                  }, mtime / time);
+                  setTimeout(() => {
+                    audio.play();
+                    blockCall = false;
+                    clearInterval(i);
+                    time = 4;
+                    document.querySelector(".al").innerHTML = "";
+                  }, mtime);
+                } else {
                   blockCall = false;
-                  clearInterval(i);
-                  time = 4;
-                  document.querySelector(".al").innerHTML = "";
-                }, mtime);
-              } else {
-                blockCall = false;
-              }
+                }
 
-              evt.target.style.backgroundColor = color;
-            })
-            .catch((err) => location.reload());
-        },
-        false
-      );
+                evt.target.style.backgroundColor = color;
+              })
+              .catch((err) => location.reload());
+          },
+          false
+        );
+      };
+
+      start();
     </script>
     <script>
       window.Echo = new Echo({
@@ -240,9 +244,11 @@
         host: `https://vps.jimdev.top:6001`,
         withCredentials: true,
       });
-      window.Echo.channel("public.channel").listen(
+
+      let echo = window.Echo.channel("public.channel").listen(
         "PublicChannel",
         function (res) {
+          console.log(res);
           res = res.message;
           let dataE = document.querySelector(
             `[data-id="${res.id}"][data-pid="${res.pid}"]`
