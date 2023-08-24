@@ -104,6 +104,14 @@
       a {
         color: black;
       }
+      .icon {
+        position: absolute;
+        display: inline;
+        z-index: 999999;
+        min-width: 20px;
+        height: 20px;
+        background-color: red;
+      }
     </style>
     <script src="https://vps.jimdev.top:6001/socket.io/socket.io.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/laravel-echo@1.6.1/dist/echo.iife.js"></script>
@@ -111,7 +119,7 @@
 
   <body>
     <audio id="audio" src="./select-colour.mp3"></audio>
-
+    <div class="wr-icon"></div>
     <div class="al"></div>
     <div class="r"></div>
     <div class="change-color">
@@ -156,9 +164,21 @@
     <h2>Github <a href="https://github.com/vanquang202">Jimdev</a></h2>
     <p>Replace <a href="https://jimdev.top/">Jimdev</a></p>
     <script>
-      const start = () => {
+      const start = async () => {
+        let color = "black";
+        let blockCall = false;
+        let time = 4;
+        let offset = 10;
+        let arr = [];
+        const mtime = time * 1000;
+        const audio = document.getElementById("audio");
+        const url = new URL(location.href);
+        const token = url.searchParams.get("token");
+        let user;
+        let users;
+
         function render() {
-          let htmlOld = "";
+          let htmlOld = ``;
           for (let index = 0; index < arr.length; index++) {
             let item = arr[index];
             let html = '<div class="r-2">';
@@ -171,20 +191,7 @@
           }
           document.querySelector(".r").innerHTML = htmlOld;
         }
-        let arr = [];
-        fetch("https://vps.jimdev.top/api/public/rplace")
-          .then((res) => res.json())
-          .then((res) => {
-            arr = res;
-            render();
-          });
 
-        let color = "black";
-        let blockCall = false;
-        let time = 4;
-        const mtime = time * 1000;
-        let offset = 10;
-        const audio = document.getElementById("audio");
         document.addEventListener(
           "click",
           function (evt) {
@@ -207,7 +214,7 @@
               .then((res) => {
                 offset = offset - 1;
                 if (offset == 0) {
-                  offset = 5;
+                  offset = 10;
                   let i = setInterval(() => {
                     time = time - 1;
                     let html = `
@@ -234,27 +241,93 @@
           },
           false
         );
+
+        window.Echo = new Echo({
+          broadcaster: "socket.io",
+          host: `https://vps.jimdev.top:6001`,
+          withCredentials: true,
+          auth: {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        });
+
+        const renderU = () => {
+          document.querySelector(".wr-icon").innerHTML = "";
+          for (let index = 0; index < users.length; index++) {
+            const u = users[index];
+            if (u.email == user?.email) continue;
+            const para = document.createElement("div");
+            para.className = "icon  icon" + u.id;
+            para.innerHTML = u.email;
+            document.querySelector(".wr-icon").appendChild(para);
+          }
+        };
+        await fetch("https://vps.jimdev.top/api/v1/get-user-by-token", {
+          method: "get",
+          headers: new Headers({
+            Authorization: "Bearer " + token,
+            "Content-Type": "application/x-www-form-urlencoded",
+          }),
+        })
+          .then((res) => res.json())
+          .then((res) => {
+            user = res.payload;
+          })
+          .catch((err) => {
+            alert("Vui lòng đăng nhập ");
+            window.location = "https://jimdev.top/";
+          });
+        await fetch("https://vps.jimdev.top/api/public/rplace")
+          .then((res) => res.json())
+          .then((res) => {
+            arr = res;
+            render();
+          });
+        let echo = await window.Echo.join("r-place")
+          .here(async (us) => {
+            users = us;
+            renderU();
+          })
+          .joining(async (user) => {
+            if (!users) users = [];
+            await users.push(user);
+            await renderU();
+          })
+          .leaving(async (user) => {
+            users = await users.filter((f) => f.email != user.email);
+            await renderU();
+          })
+          .listen("RPlace", function (res) {
+            res = res.message;
+            let dataE = document.querySelector(
+              `[data-id="${res.id}"][data-pid="${res.pid}"]`
+            );
+            dataE.style.backgroundColor = res.color;
+          })
+          .listenForWhisper("client-event", (data) => {
+            let dot;
+            let name = ".icon" + data.id;
+            dot = document.querySelector(name);
+            if (!dot) return;
+            dot.style.left = data.x + "px";
+            dot.style.top = data.y + "px";
+          });
+
+        onmousemove = function (e) {
+          setTimeout(() => {
+            let pos = e;
+            echo.whisper("client-event", {
+              id: user.id,
+              x: pos.x,
+              y: pos.y,
+            });
+          }, 3000);
+        };
       };
 
       start();
-    </script>
-    <script>
-      window.Echo = new Echo({
-        broadcaster: "socket.io",
-        host: `https://vps.jimdev.top:6001`,
-        withCredentials: true,
-      });
-
-      let echo = window.Echo.channel("public.channel").listen(
-        "PublicChannel",
-        function (res) {
-          res = res.message;
-          let dataE = document.querySelector(
-            `[data-id="${res.id}"][data-pid="${res.pid}"]`
-          );
-          dataE.style.backgroundColor = res.color;
-        }
-      );
     </script>
   </body>
 </html>
