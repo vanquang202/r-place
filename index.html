@@ -56,6 +56,7 @@
         margin: 0;
         background-color: black;
       }
+
       .r {
         position: absolute;
         flex-direction: row;
@@ -67,6 +68,7 @@
         overflow: auto;
         padding-bottom: 100px;
       }
+
       .change-color {
         position: fixed;
         bottom: 5%;
@@ -76,6 +78,7 @@
         background-color: white;
         padding: 2px;
       }
+
       .change-color > div {
         width: 20px;
         height: 20px;
@@ -86,14 +89,17 @@
         display: flex;
         background-color: white;
       }
+
       .pixcel {
         width: 2px;
         height: 2px;
         border: 0.1px solid transparent;
       }
+
       .pixcel:hover {
         border: 0.1px solid black;
       }
+
       .al {
         position: fixed;
         top: 10px;
@@ -101,9 +107,11 @@
         transform: translateX(-50%);
         z-index: 999;
       }
+
       a {
         color: black;
       }
+
       .icon {
         position: absolute;
         display: inline;
@@ -174,10 +182,16 @@
         const audio = document.getElementById("audio");
         const url = new URL(location.href);
         const token = url.searchParams.get("token");
+        if (!token) {
+          alert("Vui lòng đăng nhập ");
+          window.location = "https://jimdev.top/";
+          return;
+        }
         let user;
         let users;
+        let echo;
 
-        function render() {
+        const render = () => {
           let htmlOld = ``;
           for (let index = 0; index < arr.length; index++) {
             let item = arr[index];
@@ -190,69 +204,119 @@
             htmlOld += html;
           }
           document.querySelector(".r").innerHTML = htmlOld;
-        }
+        };
+        const evtRPlace = () => {
+          document.addEventListener(
+            "click",
+            async (evt) => {
+              audio.play();
 
-        document.addEventListener(
-          "click",
-          function (evt) {
-            audio.play();
-            if (evt.target.dataset.color) {
-              let ps = document.querySelectorAll(".b");
-              for (let index = 0; index < ps.length; index++) {
-                const element = ps[index];
-                element.style.border = "2px solid transparent";
+              if (evt.target.dataset.color) {
+                let ps = document.querySelectorAll(".b");
+                for (let index = 0; index < ps.length; index++) {
+                  const element = ps[index];
+                  element.style.border = "2px solid transparent";
+                }
+                evt.target.style.border = "2px solid black";
+                color = evt.target.dataset.color;
               }
-              evt.target.style.border = "2px solid black";
-              color = evt.target.dataset.color;
-            }
-            if (blockCall) return;
-            if (!evt.target.dataset.id) return;
-            blockCall = true;
-            fetch(
-              `https://vps.jimdev.top/api/public/send-rplace?id=${evt.target.dataset.id}&pid=${evt.target.dataset.pid}&color=${color}`
-            )
-              .then((res) => {
-                offset = offset - 1;
-                if (offset == 0) {
-                  offset = 10;
-                  let i = setInterval(() => {
-                    time = time - 1;
-                    let html = `
+
+              if (blockCall) return;
+              if (!evt.target.dataset.id) return;
+              blockCall = true;
+
+              echo.whisper("client-rp", {
+                id: evt.target.dataset.id,
+                pid: evt.target.dataset.pid,
+                color: color,
+              });
+
+              offset = offset - 1;
+              if (offset == 0) {
+                offset = 10;
+                let i = setInterval(() => {
+                  time = time - 1;
+                  let html = `
                   <div style="color: orange; width: 100%">
                     <p style="font-size: 30px ; padding : 5px"> ${time}</p>
                   </div>
                 `;
-                    document.querySelector(".al").innerHTML = html;
-                  }, mtime / time);
-                  setTimeout(() => {
-                    audio.play();
-                    blockCall = false;
-                    clearInterval(i);
-                    time = 4;
-                    document.querySelector(".al").innerHTML = "";
-                  }, mtime);
-                } else {
+                  document.querySelector(".al").innerHTML = html;
+                }, mtime / time);
+                setTimeout(() => {
+                  audio.play();
                   blockCall = false;
-                }
+                  clearInterval(i);
+                  time = 4;
+                  document.querySelector(".al").innerHTML = "";
+                }, mtime);
+              } else {
+                blockCall = false;
+              }
+              evt.target.style.backgroundColor = color;
 
-                evt.target.style.backgroundColor = color;
-              })
-              .catch((err) => location.reload());
-          },
-          false
-        );
-
-        window.Echo = new Echo({
-          broadcaster: "socket.io",
-          host: `https://vps.jimdev.top:6001`,
-          withCredentials: true,
-          auth: {
-            headers: {
-              Authorization: `Bearer ${token}`,
+              await fetch(
+                `https://vps.jimdev.top/api/public/send-rplace?id=${evt.target.dataset.id}&pid=${evt.target.dataset.pid}&color=${color}`
+              )
+                .then((res) => {})
+                .catch((err) => location.reload());
             },
-          },
-        });
+            false
+          );
+        };
+        const connectSocket = () => {
+          window.Echo = new Echo({
+            broadcaster: "socket.io",
+            host: `https://vps.jimdev.top:6001`,
+            withCredentials: true,
+            auth: {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            },
+          });
+        };
+        const joinChannel = async () => {
+          echo = await window.Echo.join("r-place")
+            .here(async (us) => {
+              users = us;
+              renderU();
+            })
+            .joining(async (user) => {
+              if (!users) users = [];
+              await users.push(user);
+              await renderU();
+            })
+            .leaving(async (user) => {
+              users = await users.filter((f) => f.email != user.email);
+              await renderU();
+            })
+            .listenForWhisper("client-rp", (data) => {
+              let dataE = document.querySelector(
+                `[data-id="${data.id}"][data-pid="${data.pid}"]`
+              );
+              dataE.style.backgroundColor = data.color;
+            })
+            .listenForWhisper("client-event", (data) => {
+              let dot;
+              let name = ".icon" + data.id;
+              dot = document.querySelector(name);
+              if (!dot) return;
+              dot.style.left = data.x + "px";
+              dot.style.top = data.y + "px";
+            });
 
+          onmousemove = await function (e) {
+            setTimeout(() => {
+              let pos = e;
+              echo.whisper("client-event", {
+                id: user.id,
+                x: pos.x,
+                y: pos.y,
+              });
+            }, 3000);
+          };
+        };
         const renderU = () => {
           document.querySelector(".wr-icon").innerHTML = "";
           for (let index = 0; index < users.length; index++) {
@@ -264,67 +328,37 @@
             document.querySelector(".wr-icon").appendChild(para);
           }
         };
-        await fetch("https://vps.jimdev.top/api/v1/get-user-by-token", {
-          method: "get",
-          headers: new Headers({
-            Authorization: "Bearer " + token,
-            "Content-Type": "application/x-www-form-urlencoded",
-          }),
-        })
-          .then((res) => res.json())
-          .then((res) => {
-            user = res.payload;
+        const loginAuth = () => {
+          fetch("https://vps.jimdev.top/api/v1/get-user-by-token", {
+            method: "get",
+            headers: new Headers({
+              Authorization: "Bearer " + token,
+              "Content-Type": "application/x-www-form-urlencoded",
+            }),
           })
-          .catch((err) => {
-            alert("Vui lòng đăng nhập ");
-            window.location = "https://jimdev.top/";
-          });
-        await fetch("https://vps.jimdev.top/api/public/rplace")
-          .then((res) => res.json())
-          .then((res) => {
-            arr = res;
-            render();
-          });
-        let echo = await window.Echo.join("r-place")
-          .here(async (us) => {
-            users = us;
-            renderU();
-          })
-          .joining(async (user) => {
-            if (!users) users = [];
-            await users.push(user);
-            await renderU();
-          })
-          .leaving(async (user) => {
-            users = await users.filter((f) => f.email != user.email);
-            await renderU();
-          })
-          .listen("RPlace", function (res) {
-            res = res.message;
-            let dataE = document.querySelector(
-              `[data-id="${res.id}"][data-pid="${res.pid}"]`
-            );
-            dataE.style.backgroundColor = res.color;
-          })
-          .listenForWhisper("client-event", (data) => {
-            let dot;
-            let name = ".icon" + data.id;
-            dot = document.querySelector(name);
-            if (!dot) return;
-            dot.style.left = data.x + "px";
-            dot.style.top = data.y + "px";
-          });
-
-        onmousemove = function (e) {
-          setTimeout(() => {
-            let pos = e;
-            echo.whisper("client-event", {
-              id: user.id,
-              x: pos.x,
-              y: pos.y,
+            .then((res) => res.json())
+            .then(async (res) => {
+              user = res.payload;
+              await connectSocket();
+              await joinChannel();
+              await evtRPlace();
+            })
+            .catch((err) => {
+              alert("Vui lòng đăng nhập ");
+              window.location = "https://jimdev.top/";
             });
-          }, 3000);
         };
+        const getData = () => {
+          fetch("https://vps.jimdev.top/api/public/rplace")
+            .then((res) => res.json())
+            .then((res) => {
+              arr = res;
+              render();
+            });
+        };
+
+        await loginAuth();
+        await getData();
       };
 
       start();
