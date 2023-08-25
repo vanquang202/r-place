@@ -56,17 +56,44 @@
         margin: 0;
         background-color: black;
       }
+      .dl {
+        position: fixed;
+        background-color: black;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: auto;
+      }
+
+      .dl::-webkit-scrollbar {
+        display: none;
+      }
+
+      .dl {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      .r::-webkit-scrollbar {
+        display: none;
+      }
+
+      .r {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
 
       .r {
         position: absolute;
-        flex-direction: row;
-        flex-wrap: wrap;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%) scale(2.6);
-        background-color: white;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: black;
         overflow: auto;
-        padding-bottom: 100px;
+        padding-bottom: 200px;
+        transform: scale(0.8);
       }
 
       .change-color {
@@ -91,8 +118,8 @@
       }
 
       .pixcel {
-        width: 2px;
-        height: 2px;
+        width: 2px !important;
+        height: 2px !important;
         border: 0.1px solid transparent;
       }
 
@@ -129,7 +156,9 @@
     <audio id="audio" src="./select-colour.mp3"></audio>
     <div class="wr-icon"></div>
     <div class="al"></div>
-    <div class="r"></div>
+    <div class="dl">
+      <div class="r"></div>
+    </div>
     <div class="change-color">
       <div data-color="brown" class="b" style="background-color: brown"></div>
       <div
@@ -359,6 +388,31 @@
 
         await loginAuth();
         await getData();
+
+        let size = 1;
+        document.addEventListener(
+          "wheel",
+          function (e) {
+            console.log(e);
+            let detay = e.deltaY;
+            let detayX = e.deltaX;
+            if (detayX != "-0") return;
+            if (detay < 100 && detay > -100) return;
+            e.preventDefault();
+            e.stopPropagation();
+            if (detay < 0) {
+              size = size + 0.2;
+              document.querySelector(".r").style.transform = ` scale(${size})`;
+              console.log("zoom");
+            } else {
+              size = size - 0.2;
+              document.querySelector(".r").style.transform = ` scale(${size})`;
+            }
+          },
+          {
+            passive: false, // Add this
+          }
+        );
       };
 
       start();
