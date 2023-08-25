@@ -66,15 +66,6 @@
         overflow: auto;
       }
 
-      .dl::-webkit-scrollbar {
-        display: none;
-      }
-
-      .dl {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
-
       .r::-webkit-scrollbar {
         display: none;
       }
@@ -393,17 +384,18 @@
         document.addEventListener(
           "wheel",
           function (e) {
-            console.log(e);
             let detay = e.deltaY;
             let detayX = e.deltaX;
             if (detayX != "-0") return;
             if (detay < 100 && detay > -100) return;
+            let left = e.x;
+            let top = e.y;
+
             e.preventDefault();
             e.stopPropagation();
             if (detay < 0) {
               size = size + 0.2;
               document.querySelector(".r").style.transform = ` scale(${size})`;
-              console.log("zoom");
             } else {
               size = size - 0.2;
               document.querySelector(".r").style.transform = ` scale(${size})`;
