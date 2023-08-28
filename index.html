@@ -369,6 +369,7 @@
         document.addEventListener(
           "wheel",
           function (e) {
+            console.log(e);
             let detay = e.deltaY;
             let detayX = e.deltaX;
             if (detayX != "-0") return;
@@ -381,11 +382,15 @@
             if (detay < 0) {
               size = size + 0.2;
               document.querySelector(".r").style.transform = ` scale(${size})`;
+              document.querySelector(".dl").scrollTo(e.layerX, e.layerY);
             } else {
               size = size - 0.2;
               document.querySelector(
                 ".r"
               ).style.transform = `   scale(${size})`;
+              document
+                .querySelector(".dl")
+                .scrollTo(screen.width / 2, screen.height / 2);
             }
           },
           {
