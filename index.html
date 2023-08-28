@@ -63,7 +63,7 @@
         left: 0;
         right: 0;
         bottom: 0;
-        overflow: auto;
+        overflow: scroll;
       }
 
       .r::-webkit-scrollbar {
@@ -76,15 +76,10 @@
       }
 
       .r {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
         background-color: black;
         overflow: auto;
         padding-bottom: 200px;
-        transform: scale(0.8);
+        transform-origin: left top;
       }
 
       .change-color {
@@ -109,6 +104,7 @@
       }
 
       .pixcel {
+        position: relative;
         width: 2px !important;
         height: 2px !important;
         border: 0.1px solid transparent;
@@ -134,8 +130,7 @@
         position: absolute;
         display: inline;
         z-index: 999999;
-        min-width: 20px;
-        height: 20px;
+        font-size: 5px;
         background-color: red;
       }
     </style>
@@ -145,9 +140,9 @@
 
   <body>
     <audio id="audio" src="./select-colour.mp3"></audio>
-    <div class="wr-icon"></div>
     <div class="al"></div>
     <div class="dl">
+      <div class="wr-icon"></div>
       <div class="r"></div>
     </div>
     <div class="change-color">
@@ -249,6 +244,8 @@
                 id: evt.target.dataset.id,
                 pid: evt.target.dataset.pid,
                 color: color,
+                uid: user.id,
+                email: user.email,
               });
 
               offset = offset - 1;
@@ -305,47 +302,35 @@
             .joining(async (user) => {
               if (!users) users = [];
               await users.push(user);
-              await renderU();
             })
             .leaving(async (user) => {
-              users = await users.filter((f) => f.email != user.email);
-              await renderU();
+              let name = ".icon" + user.id;
+              document.querySelector(name)?.remove();
             })
             .listenForWhisper("client-rp", (data) => {
               let dataE = document.querySelector(
                 `[data-id="${data.id}"][data-pid="${data.pid}"]`
               );
               dataE.style.backgroundColor = data.color;
-            })
-            .listenForWhisper("client-event", (data) => {
-              let dot;
-              let name = ".icon" + data.id;
-              dot = document.querySelector(name);
-              if (!dot) return;
-              dot.style.left = data.x + "px";
-              dot.style.top = data.y + "px";
+              let u = document.querySelector(".icon" + data.uid);
+              if (!u) {
+                const para = document.createElement("div");
+                para.className = "icon  icon" + data.uid;
+                para.innerHTML = data.email;
+                dataE.appendChild(para);
+              } else {
+                dataE.appendChild(u);
+              }
             });
-
-          onmousemove = await function (e) {
-            setTimeout(() => {
-              let pos = e;
-              echo.whisper("client-event", {
-                id: user.id,
-                x: pos.x,
-                y: pos.y,
-              });
-            }, 3000);
-          };
         };
         const renderU = () => {
-          document.querySelector(".wr-icon").innerHTML = "";
           for (let index = 0; index < users.length; index++) {
             const u = users[index];
             if (u.email == user?.email) continue;
             const para = document.createElement("div");
             para.className = "icon  icon" + u.id;
             para.innerHTML = u.email;
-            document.querySelector(".wr-icon").appendChild(para);
+            document.querySelector(".pixcel").appendChild(para);
           }
         };
         const loginAuth = () => {
@@ -398,7 +383,9 @@
               document.querySelector(".r").style.transform = ` scale(${size})`;
             } else {
               size = size - 0.2;
-              document.querySelector(".r").style.transform = ` scale(${size})`;
+              document.querySelector(
+                ".r"
+              ).style.transform = `   scale(${size})`;
             }
           },
           {
